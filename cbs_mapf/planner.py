@@ -50,9 +50,11 @@ class Planner:
 
         constraints = Constraints()
 
+        ### CBS 流程###
+        ###^ 1.一次计算所有robot在没有约束下的初始path，放入到solution
         # Compute path for each agent using low level planner
         solution = dict((agent, self.calculate_path(agent, constraints, None)) for agent in self.agents)
-
+        ###创建一个初始open表，放入根node
         open = []
         if all(len(path) != 0 for path in solution.values()):
             # Make root node
@@ -62,6 +64,9 @@ class Planner:
 
         manager = mp.Manager()
         iter_ = 0
+        ###这个while的退出条件是open表的node数量刚好为1
+        ###因为在迭代冲突求解的过程中，如果有冲突，那么当前的Node会分裂成2个子node，放入到open表中 -- open.append((node1,node2))
+        ###当node长度为1时，则表示没有冲突不需要分裂
         while open and iter_ < max_iter:
             iter_ += 1
 
@@ -96,6 +101,7 @@ class Planner:
     Abstracted away the cbs search for multiprocessing.
     The parameters open and results MUST BE of type ListProxy to ensure synchronization.
     '''
+    ###
     def search_node(self, best: CTNode, results):
         agent_i, agent_j, time_of_conflict = self.validate_paths(self.agents, best)
 
@@ -135,6 +141,8 @@ class Planner:
     '''
     Pair of agent, point of conflict
     '''
+    ###找到所有robots的pair，例[(0,1),(0,2),(1,2)]
+    ###然后对每个pair，计算他们的冲突时间，如果冲突时间为-1，则表示没有冲突，则放入到open表中
     def validate_paths(self, agents, node: CTNode):
         # Check collision pair-wise
         for agent_i, agent_j in combinations(agents, 2):
